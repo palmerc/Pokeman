@@ -2,6 +2,8 @@
 
 from bs4 import BeautifulSoup
 from requests_toolbelt.multipart.encoder import MultipartEncoder
+import argparse
+import pathlib
 import requests
 import random
 import urllib.parse
@@ -31,7 +33,7 @@ class Pokemon:
         return f'{int(self.number):03}'
 
 
-def pokemen():
+def get_pokemen():
     pokedex = 'https://www.pokemon.com/us/pokedex/'
 
     request = requests.get(pokedex)
@@ -52,8 +54,14 @@ def pokemen():
     return pokemen
 
 
-def pokemon_pick():
-    return random.sample(pokemen(), 1).pop()
+def get_pokemon(number=None):
+    pokemen = get_pokemen()
+    if number:
+        pokemen = list(filter(lambda p: p.number == number, pokemen))
+    else:
+        pokemen = random.sample(pokemen, 1)
+
+    return pokemen.pop()
 
 
 def change_slack_photo(token, name, png, dryrun=False):
@@ -98,18 +106,35 @@ def post_slack_qotd(hook, name, url, dryrun=False):
         requests.post(slackurl_hook, json=payload)
 
 
-with open('config.yml') as f:
-    config = yaml.load(f.read(), Loader=yaml.FullLoader)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Set Slack Profile to a Pokémon')
+    parser.add_argument('--config', dest='config',
+                        help='set the path of the config to use', default="config.yml")
+    parser.add_argument('-p', '--pokemon', dest='pokemon',
+                        help='set a specific pokemon')
+    parser.add_argument('-d', '--dryrun', dest='dryrun', action='store_true',
+                        help='do not actually change the pokémon')
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
+                        help='print extra diagnostic information')
+    args = parser.parse_args()
 
-token = config.get('token')
-qotd_hook = config.get('qotd_hook')
+    config_path = pathlib.Path(args.config)
+    with open(config_path) as f:
+        config = yaml.load(f.read(), Loader=yaml.FullLoader)
 
-pokemon = pokemon_pick()
+    token = config.get('token')
+    qotd_hook = config.get('qotd_hook')
+    if args.verbose:
+        print("Token: {}". format(token))
+        print("QOTD: {}". format(qotd_hook))
 
-if token and len(token) > 0:
-    name, png = pokemon.png()
-    change_slack_photo(token, name, png)
-    change_slack_status(token, str(pokemon))
+    pokemon = get_pokemon(args.pokemon)
+    print("Pokemon: {} - {}".format(pokemon.number, pokemon.name))
 
-if qotd_hook and len(qotd_hook) > 0:
-    post_slack_qotd(qotd_hook, pokemon.name, pokemon.img_url())
+    if token and len(token) > 0:
+        name, png = pokemon.png()
+        change_slack_photo(token, name, png, dryrun=args.dryrun)
+        change_slack_status(token, str(pokemon), dryrun=args.dryrun)
+
+    if qotd_hook and len(qotd_hook) > 0:
+        post_slack_qotd(qotd_hook, pokemon.name, pokemon.img_url(), dryrun=args.dryrun)
