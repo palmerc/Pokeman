@@ -64,6 +64,17 @@ def get_pokemon(number=None):
     return pokemen.pop()
 
 
+def send_slack_message(token, channel, message, dryrun=False):
+    url = 'https://slack.com/api/chat.postMessage'
+    payload = {'token': token, 'channel': channel, 'text': message, 'as_user': True}
+    if dryrun:
+        print('Send message')
+        print(url)
+    else:
+        response = requests.post(url, payload)
+        print(response)
+
+
 def change_slack_photo(token, name, png, dryrun=False):
     slackurl_photo = f'https://slack.com/api/users.setPhoto?token={token}&pretty=1'
     m = MultipartEncoder(fields={'image': (name, png, 'image/png')})
@@ -88,8 +99,7 @@ def change_slack_status(token, status, dryrun=False):
         requests.post(payload)
 
 
-def post_slack_qotd(hook, name, url, dryrun=False):
-    slackurl_hook = hook
+def get_qotd(name, thumb_url):
     r = requests.get('http://quotes.rest/qod?category=management')
     json_data = json.loads(r.text)
     if json_data:
@@ -97,10 +107,15 @@ def post_slack_qotd(hook, name, url, dryrun=False):
         author = json_data['contents']['quotes'][0]['author']
 
     payload = {'text': '{} finds this quote inspiring...'.format(name), 'attachments': [{'author_name': author,
-                                                                                         'thumb_url': url,
+                                                                                         'thumb_url': thumb_url,
                                                                                          'text': quote}]}
+    return payload
+
+
+def post_slack_message(hook, payload, dryrun=False):
+    slackurl_hook = hook
+
     if dryrun:
-        print('Post Slack QOTD')
         print(slackurl_hook, payload)
     else:
         requests.post(slackurl_hook, json=payload)
@@ -124,9 +139,11 @@ if __name__ == "__main__":
 
     token = config.get('token')
     qotd_hook = config.get('qotd_hook')
+    hello_hook = config.get('hello_hook')
     if args.verbose:
         print("Token: {}". format(token))
         print("QOTD: {}". format(qotd_hook))
+        print("Hello: {}". format(hello_hook))
 
     pokemon = get_pokemon(args.pokemon)
     print("Pokemon: {} - {}".format(pokemon.number, pokemon.name))
@@ -135,6 +152,8 @@ if __name__ == "__main__":
         name, png = pokemon.png()
         change_slack_photo(token, name, png, dryrun=args.dryrun)
         change_slack_status(token, str(pokemon), dryrun=args.dryrun)
+        send_slack_message(token, '#dev-ios', 'Good morning!', dryrun=args.dryrun)
 
     if qotd_hook and len(qotd_hook) > 0:
-        post_slack_qotd(qotd_hook, pokemon.name, pokemon.img_url(), dryrun=args.dryrun)
+        payload = get_qotd(pokemon.name, pokemon.img_url())
+        post_slack_message(qotd_hook, payload, dryrun=args.dryrun)
