@@ -2,6 +2,8 @@
 
 from bs4 import BeautifulSoup
 from requests_toolbelt.multipart.encoder import MultipartEncoder
+from datetime import datetime
+import time
 import argparse
 import pathlib
 import requests
@@ -64,15 +66,23 @@ def get_pokemon(number=None):
     return pokemen.pop()
 
 
-def send_slack_message(token, channel, message, dryrun=False):
-    url = 'https://slack.com/api/chat.postMessage'
-    payload = {'token': token, 'channel': channel, 'text': message, 'as_user': True}
-    if dryrun:
-        print('Send message')
-        print(url)
+def send_slack_message(token, channel, message, at=None, dryrun=False):
+    base_url = 'https://slack.com/api/'
+    payload = {'token': token,
+               'channel': channel,
+               'text': message,
+               'as_user': True}
+
+    if at:
+        url = base_url + 'chat.scheduleMessage'
+        payload['post_at'] = at
     else:
-        response = requests.post(url, payload)
-        print(response)
+        url = base_url + 'chat.postMessage'
+
+    if dryrun:
+        print('Send message: "{}" at {} to {}'.format(message, at, channel))
+    else:
+        requests.post(url, payload)
 
 
 def change_slack_photo(token, name, png, dryrun=False):
@@ -112,13 +122,35 @@ def get_qotd(name, thumb_url):
     return payload
 
 
-def post_slack_message(hook, payload, dryrun=False):
+def post_slack_message_with_hook(hook, payload, dryrun=False):
     slackurl_hook = hook
 
     if dryrun:
         print(slackurl_hook, payload)
     else:
         requests.post(slackurl_hook, json=payload)
+
+
+def get_time_in_future():
+    now = datetime.now()
+    now_time = int(time.mktime(now.timetuple())) + 20
+    max_time = now_time + 60 * 30
+    return random.randrange(now_time, max_time)
+
+
+def get_greeting():
+    greetings = [
+        'Top of the morning to you.',
+        'Morning',
+        'God morgen',
+        'Bonjour',
+        'Доброе утро',
+        'Guten Morgen'
+    ]
+    for i in range(0, 20):
+        greetings.extend(['Good Morning', 'good morning', 'Good morning!'])
+
+    return random.choice(greetings)
 
 
 if __name__ == "__main__":
@@ -152,8 +184,8 @@ if __name__ == "__main__":
         name, png = pokemon.png()
         change_slack_photo(token, name, png, dryrun=args.dryrun)
         change_slack_status(token, str(pokemon), dryrun=args.dryrun)
-        send_slack_message(token, '#dev-ios', 'Good morning!', dryrun=args.dryrun)
+        send_slack_message(token, '#dev-ios', get_greeting(), at=get_time_in_future(), dryrun=args.dryrun)
 
     if qotd_hook and len(qotd_hook) > 0:
         payload = get_qotd(pokemon.name, pokemon.img_url())
-        post_slack_message(qotd_hook, payload, dryrun=args.dryrun)
+        post_slack_message_with_hook(qotd_hook, payload, dryrun=args.dryrun)
