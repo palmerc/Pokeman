@@ -70,8 +70,7 @@ def send_slack_message(token, channel, message, at=None, dryrun=False):
     base_url = 'https://slack.com/api/'
     payload = {'token': token,
                'channel': channel,
-               'text': message,
-               'as_user': True}
+               'text': message}
 
     if at:
         url = base_url + 'chat.scheduleMessage'
