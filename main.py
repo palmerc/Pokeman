@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from bs4 import BeautifulSoup
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 from datetime import datetime
 import time
@@ -9,61 +8,10 @@ import pathlib
 import requests
 import random
 import urllib.parse
-import re
-import os
 import json
 import yaml
 
-
-class Pokemon:
-    def __init__(self, name, number):
-        self.name = name
-        self.number = number
-
-    def __str__(self):
-        return f'{self.name} - {self._padded_number()}'
-
-    def img_url(self):
-        return f'https://assets.pokemon.com/assets/cms2/img/pokedex/full/{self._padded_number()}.png'
-
-    def png(self):
-        name = 'pokemon' + os.path.basename(self.img_url())
-        png = requests.get(self.img_url()).content
-        return name, png
-
-    def _padded_number(self):
-        return f'{int(self.number):03}'
-
-
-def get_pokemen():
-    pokedex = 'https://www.pokemon.com/us/pokedex/'
-
-    request = requests.get(pokedex)
-    soup = BeautifulSoup(request.text, 'html.parser')
-
-    pokedex_re = re.compile('^National Pokédex$')
-    pokemon_re = re.compile('(\d+) - (\w+)')
-
-    pokemen = []
-    for header in soup.find_all('h2', text=pokedex_re):
-        ul_tag = header.findNext('ul')
-        for a_tag in ul_tag.find_all('a'):
-            match = re.match(pokemon_re, a_tag.text)
-            number = match.group(1)
-            name = match.group(2)
-            pokemen.append(Pokemon(name, number))
-
-    return pokemen
-
-
-def get_pokemon(number=None):
-    pokemen = get_pokemen()
-    if number:
-        pokemen = list(filter(lambda p: p.number == number, pokemen))
-    else:
-        pokemen = random.sample(pokemen, 1)
-
-    return pokemen.pop()
+from pokemen import Pokemen
 
 
 def send_slack_message(token, channel, message, at=None, dryrun=False):
@@ -176,14 +124,13 @@ if __name__ == "__main__":
         print("QOTD: {}". format(qotd_hook))
         print("Hello: {}". format(hello_hook))
 
-    pokemon = get_pokemon(args.pokemon)
+    pokemon = Pokemen.select_pokemon(number=args.pokemon)
     print("Pokemon: {} - {}".format(pokemon.number, pokemon.name))
 
     if token and len(token) > 0:
         name, png = pokemon.png()
         change_slack_photo(token, name, png, dryrun=args.dryrun)
         change_slack_status(token, str(pokemon), dryrun=args.dryrun)
-        send_slack_message(token, '#dev-ios', get_greeting(), at=get_time_in_future(), dryrun=args.dryrun)
 
     if qotd_hook and len(qotd_hook) > 0:
         payload = get_qotd(pokemon.name, pokemon.img_url())
