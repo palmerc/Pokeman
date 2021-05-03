@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from requests_toolbelt.multipart.encoder import MultipartEncoder
-from datetime import datetime
+from datetime import date, datetime
 import time
 import argparse
 import pathlib
@@ -98,17 +98,34 @@ def get_greeting():
         'Morning',
         'God morgen',
         'Bonjour',
-        'Доброе утро',
-        'Guten Morgen'
+        'Buenas dias',
+        'Доброго ранку',
+        'Guten Morgen',
+        'おはよう'
     ]
-    for i in range(0, 20):
-        greetings.extend(['Good Morning', 'good morning', 'Good morning!'])
 
-    return random.choice(greetings)
+    # 'Доброе утро',
+    today = date.today()
+    new_year = date.fromisoformat('0001-01-01')
+    new_year = new_year.replace(year=today.year)
+    year_zero = date.fromisoformat('1974-05-06')
+    birthday = year_zero.replace(year=today.year)
+    christmas_day = date.fromisoformat('0001-12-25')
+    christmas = christmas_day.replace(year=today.year)
+    if today == new_year:
+        return 'Happy New Year!'
+    elif today == birthday:
+        return 'Happy Birthday!'
+    elif today == christmas:
+        return 'Merry Christmas!'
+    else:
+        for i in range(0, 20):
+            greetings.extend(['Good Morning', 'good morning', 'Good morning!'])
+        return random.choice(greetings)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Set Slack Profile to a Pokémon')
+    parser = argparse.ArgumentParser(description='Set Slack Profile to a Pokémon') 
     parser.add_argument('--config', dest='config',
                         help='set the path of the config to use', default="config.yml")
     parser.add_argument('-p', '--pokemon', dest='pokemon',
@@ -132,7 +149,7 @@ if __name__ == "__main__":
         print("Hello: {}". format(hello_hook))
 
     pokemon = Pokemen.select_pokemon(number=args.pokemon)
-    print("Pokemon: {}".format(pokemon.display_name()))
+    print(f'{date.today()}: {pokemon.display_name()}')
 
     if token and len(token) > 0:
         client = WebClient(token=token)
