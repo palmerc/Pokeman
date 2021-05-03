@@ -10,72 +10,79 @@ import random
 import urllib.parse
 import json
 import yaml
+import os
+
+from slack_sdk import WebClient
+from slack_sdk.webhook import WebhookClient
 
 from pokemen import Pokemen
+from pokemon_tcg import PokemenTCG
 
 
-def send_slack_message(token, channel, message, at=None, dryrun=False):
-    base_url = 'https://slack.com/api/'
-    payload = {'token': token,
-               'channel': channel,
-               'text': message}
-
-    if at:
-        url = base_url + 'chat.scheduleMessage'
-        payload['post_at'] = at
-    else:
-        url = base_url + 'chat.postMessage'
-
-    if dryrun:
-        print('Send message: "{}" at {} to {}'.format(message, at, channel))
-    else:
-        requests.post(url, payload)
-
-
-def change_slack_photo(token, name, png, dryrun=False):
-    slackurl_photo = f'https://slack.com/api/users.setPhoto?token={token}&pretty=1'
-    m = MultipartEncoder(fields={'image': (name, png, 'image/png')})
-    headers = {'Content-Type': m.content_type}
-    url = slackurl_photo.format(token)
-    if dryrun:
-        print('Change Slack Photo')
-        print(url)
-    else:
-        requests.post(url, headers=headers, data=m)
-
-
-def change_slack_status(token, status, dryrun=False):
-    profile = {'status_text': status}
-    profile_json = json.dumps(profile)
-    encoded_json = urllib.parse.quote(profile_json)
-    payload = f'https://slack.com/api/users.profile.set?token={token}&profile={encoded_json}&pretty=1'
-    if dryrun:
-        print('Change Slack Status')
-        print(payload)
-    else:
-        requests.post(payload)
-
-
-def get_qotd(name, thumb_url):
+def get_qotd(markdown=False):
     r = requests.get('http://quotes.rest/qod?category=management')
     json_data = json.loads(r.text)
     if json_data:
         quote = json_data['contents']['quotes'][0]['quote']
         author = json_data['contents']['quotes'][0]['author']
 
-    payload = {'text': '{} finds this quote inspiring...'.format(name), 'attachments': [{'author_name': author,
-                                                                                         'thumb_url': thumb_url,
-                                                                                         'text': quote}]}
-    return payload
-
-
-def post_slack_message_with_hook(hook, payload, dryrun=False):
-    slackurl_hook = hook
-
-    if dryrun:
-        print(slackurl_hook, payload)
+        if markdown:
+            return f'> *{author}*\n>{quote}'
+        else:
+            return f'{author}:\n{quote}'
     else:
-        requests.post(slackurl_hook, json=payload)
+        return None
+
+
+def get_qotd_blocks(pokemon):
+    return [
+        {
+            'type': 'section',
+            'text': {
+                'type': 'mrkdwn',
+                'text': '{} finds this quote inspiring...'.format(pokemon.short_name())
+            }
+        },
+        {
+            'type': 'section',
+            'text': {
+                'type': 'mrkdwn',
+                'text': get_qotd(markdown=True)
+            },
+            'accessory': {
+                'type': 'image',
+                'image_url': pokemon.img_url(),
+                'alt_text': pokemon.display_name()
+            }
+        }
+    ]
+
+
+def get_card_blocks(pokemon):
+    card = pokemon.random_card()
+    name = card.display_name()
+    title_link = '<{}|{}>'.format(card.url(), name)
+    image_url = card.image()
+    filename = os.path.basename(image_url)
+    return [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": title_link
+            }
+        },
+        {
+            "type": "image",
+            "title": {
+                "type": "plain_text",
+                "text": filename,
+                "emoji": True
+            },
+            "image_url": image_url,
+            "alt_text": name
+        }
+    ]
 
 
 def get_time_in_future():
@@ -125,13 +132,21 @@ if __name__ == "__main__":
         print("Hello: {}". format(hello_hook))
 
     pokemon = Pokemen.select_pokemon(number=args.pokemon)
-    print("Pokemon: {} - {}".format(pokemon.number, pokemon.name))
+    print("Pokemon: {}".format(pokemon.display_name()))
 
     if token and len(token) > 0:
+        client = WebClient(token=token)
+
         name, png = pokemon.png()
-        change_slack_photo(token, name, png, dryrun=args.dryrun)
-        change_slack_status(token, str(pokemon), dryrun=args.dryrun)
+        client.users_setPhoto(image=png)
+        client.users_profile_set(profile={'status_text': pokemon.display_name()})
+        client.chat_postMessage(channel='#pokecards', text=pokemon.display_name(), blocks=get_card_blocks(pokemon))
+        client.chat_scheduleMessage(channel='#dev-ios',
+                                    post_at=get_time_in_future(),
+                                    text=get_greeting())
 
     if qotd_hook and len(qotd_hook) > 0:
-        payload = get_qotd(pokemon.name, pokemon.img_url())
-        post_slack_message_with_hook(qotd_hook, payload, dryrun=args.dryrun)
+        webhook = WebhookClient(qotd_hook)
+
+        if not args.dryrun:
+            webhook.send(blocks=get_qotd_blocks(pokemon))

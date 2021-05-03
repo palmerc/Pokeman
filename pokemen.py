@@ -17,7 +17,9 @@ class Pokemen:
         else:
             pokemen = random.sample(Pokemen.gather_pokemen(), 1)
 
-        return pokemen.pop()
+        pokemon = pokemen.pop()
+
+        return pokemon
 
     @classmethod
     def gather_pokemen(cls):
@@ -30,7 +32,7 @@ class Pokemen:
         pokemon_re = re.compile('(\d+) - (\w+)')
 
         pokemen = []
-        for header in soup.find_all('h2', text=pokedex_re):
+        for header in soup.findAll('h2', text=pokedex_re):
             ul_tag = header.findNext('ul')
             for a_tag in ul_tag.find_all('a'):
                 match = re.match(pokemon_re, a_tag.text)
