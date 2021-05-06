@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
 from requests_toolbelt.multipart.encoder import MultipartEncoder
-from datetime import datetime
+from datetime import datetime, date
 import time
 import argparse
 import pathlib
 import requests
 import random
-import urllib.parse
 import json
 import yaml
 import os
@@ -16,7 +15,6 @@ from slack_sdk import WebClient
 from slack_sdk.webhook import WebhookClient
 
 from pokemen import Pokemen
-from pokemon_tcg import PokemenTCG
 
 
 def get_qotd(markdown=False):
@@ -101,10 +99,24 @@ def get_greeting():
         'Доброе утро',
         'Guten Morgen'
     ]
-    for i in range(0, 20):
-        greetings.extend(['Good Morning', 'good morning', 'Good morning!'])
 
-    return random.choice(greetings)
+    today = date.today()
+    new_year = date.fromisoformat('0001-01-01')
+    new_year = new_year.replace(year=today.year)
+    year_zero = date.fromisoformat('0001-05-06')
+    birthday = year_zero.replace(year=today.year)
+    christmas_day = date.fromisoformat('0001-12-25')
+    christmas = christmas_day.replace(year=today.year)
+    if today == new_year:
+        return 'Happy New Year!'
+    elif today == birthday:
+        return 'Happy Birthday!'
+    elif today == christmas:
+        return 'Merry Christmas!'
+    else:
+        for i in range(0, 20):
+            greetings.extend(['Good Morning', 'good morning', 'Good morning!'])
+        return random.choice(greetings)
 
 
 if __name__ == "__main__":
