@@ -6,14 +6,15 @@ from pokemon_tcg import PokemenTCG
 
 
 class Pokemon(object):
-    def __init__(self, name, number):
-        self.name = name
+    def __init__(self, number=None):
         self.number = number
+        self.name = None
         self._form = 0
         self._forms = []
+        self._update_name()
 
     def __str__(self):
-        return self.name()
+        return self.display_name()
 
     def short_name(self):
         return self.name
@@ -44,6 +45,31 @@ class Pokemon(object):
             self._get_pokemon_formes()
         return self._forms
 
+    def evolutions(self):
+        evolutions = {}
+        soup = self._pokemon_detail()
+        for stages in soup.findAll('ul', {'class': 'evolution-profile'}):
+            positions = ['first', 'middle', 'last']
+            for position in positions:
+                for stage in stages.findAll('li', {'class': position}):
+                    evolutions[position] = []
+                    for evolution in stage.findAll('h3'):
+                        pokemon_numbers = evolution.findAll('span', {'class': 'pokemon-number'})
+                        for pokemon_number in pokemon_numbers:
+                            evolution_text = evolution.text.strip()
+                            number = pokemon_number.text.strip()
+                            name = evolution_text.removesuffix(number)
+                            number = number.removeprefix('#')
+                            name = name.strip()
+                            evolutions[position].append((name, number))
+        return evolutions
+
+    def _update_name(self):
+        if self.number:
+            detail = self._pokemon_detail()
+            title = detail.title.text
+            self.name = title.removesuffix('| Pokédex').strip()
+
     def _padded_number(self):
         return f'{int(self.number):03}'
 
@@ -57,5 +83,5 @@ class Pokemon(object):
     def _pokemon_detail(self):
         pokedex = 'https://www.pokemon.com/us/pokedex/'
 
-        request = requests.get(pokedex + self.number)
+        request = requests.get(pokedex + str(self.number))
         return BeautifulSoup(request.text, 'html.parser')
