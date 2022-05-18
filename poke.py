@@ -106,18 +106,18 @@ def get_greeting():
 
     # 'Доброе утро',
     today = date.today()
-    new_year = date.fromisoformat('0001-01-01')
-    new_year = new_year.replace(year=today.year)
-    year_zero = date.fromisoformat('1974-05-06')
-    birthday = year_zero.replace(year=today.year)
-    christmas_day = date.fromisoformat('0001-12-25')
-    christmas = christmas_day.replace(year=today.year)
+    new_year = date.fromisoformat('0001-01-01').replace(year=today.year)
+    birthday = date.fromisoformat('1974-05-06').replace(year=today.year)
+    constitution_day = date.fromisoformat('1814-05-17').replace(year=today.year)
+    christmas_day = date.fromisoformat('0001-12-25').replace(year=today.year)
     if today == new_year:
         return 'Happy New Year!'
     elif today == birthday:
         return 'Happy Birthday!'
-    elif today == christmas:
+    elif today == christmas_day:
         return 'Merry Christmas!'
+    elif today == constitution_day:
+        return 'Gratulerer med dagen!'
     else:
         for i in range(0, 20):
             greetings.extend(['Good Morning', 'good morning', 'Good morning!'])
