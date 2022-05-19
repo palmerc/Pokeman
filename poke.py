@@ -125,9 +125,12 @@ def get_greeting():
 
 
 if __name__ == "__main__":
+    source_dir = pathlib.Path(__file__).parent
+    config_yml = source_dir / 'config.yml'
+
     parser = argparse.ArgumentParser(description='Set Slack Profile to a Pokémon') 
     parser.add_argument('--config', dest='config',
-                        help='set the path of the config to use', default="config.yml")
+                        help='set the path of the config to use', default=str(config_yml))
     parser.add_argument('-p', '--pokemon', dest='pokemon',
                         help='set a specific pokemon')
     parser.add_argument('-d', '--dryrun', dest='dryrun', action='store_true',
