@@ -20,8 +20,13 @@ from pokemon_tcg import PokemenTCG
 
 
 def get_qotd(markdown=False):
-    r = requests.get('http://quotes.rest/qod?category=management')
-    json_data = json.loads(r.text)
+    r = requests.get('https://quotes.rest/qod?category=management&language=en')
+    json_data = None
+    try:
+        json_data = json.loads(r.text)
+    except json.decoder.JSONDecodeError:
+        print(f'QOTD did not return valid JSON - {r.text}')
+
     if json_data:
         quote = json_data['contents']['quotes'][0]['quote']
         author = json_data['contents']['quotes'][0]['author']
@@ -98,7 +103,7 @@ def get_greeting():
         'Morning',
         'God morgen',
         'Bonjour',
-        'Buenas dias',
+        'Buenas días',
         'Доброго ранку',
         'Guten Morgen',
         'おはよう'
@@ -106,17 +111,20 @@ def get_greeting():
 
     # 'Доброе утро',
     today = date.today()
-    new_year = date.fromisoformat('0001-01-01').replace(year=today.year)
-    birthday = date.fromisoformat('1974-05-06').replace(year=today.year)
-    constitution_day = date.fromisoformat('1814-05-17').replace(year=today.year)
-    christmas_day = date.fromisoformat('0001-12-25').replace(year=today.year)
-    if today == new_year:
+    new_year = date.fromisoformat('0001-01-01')
+    birthday = date.fromisoformat('1974-05-06')
+    jv_bday = date.fromisoformat('1979-08-30')
+    constitution_day = date.fromisoformat('1814-05-17')
+    christmas_day = date.fromisoformat('0001-12-25')
+    if today == new_year.replace(year=today.year):
         return 'Happy New Year!'
-    elif today == birthday:
-        return 'Happy Birthday!'
-    elif today == christmas_day:
+    elif today == birthday.replace(year=today.year):
+        return 'Happy Birthday <@Cameron Palmer>'
+    elif today == jv_bday.replace(year=today.year):
+        return f'Gratulerer med dagen <@janvidar>! Du er {int((today - jv_bday).total_seconds())} sekunder ung!'
+    elif today == christmas_day.replace(year=today.year):
         return 'Merry Christmas!'
-    elif today == constitution_day:
+    elif today == constitution_day.replace(year=today.year):
         return 'Gratulerer med dagen!'
     else:
         for i in range(0, 20):
@@ -133,6 +141,7 @@ if __name__ == "__main__":
                         help='set the path of the config to use', default=str(config_yml))
     parser.add_argument('-p', '--pokemon', dest='pokemon',
                         help='set a specific pokemon')
+    parser.add_argument('--now', action='store_true', help='send message now')
     parser.add_argument('-d', '--dryrun', dest='dryrun', action='store_true',
                         help='do not actually change the pokémon')
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
@@ -158,15 +167,25 @@ if __name__ == "__main__":
         client = WebClient(token=token)
 
         name, png = pokemon.png()
-        client.users_setPhoto(image=png)
-        client.users_profile_set(profile={'status_text': pokemon.display_name()})
-        client.chat_postMessage(channel='#pokecards', text=pokemon.display_name(), blocks=get_card_blocks(pokemon))
-        client.chat_scheduleMessage(channel='#dev-ios',
-                                    post_at=get_time_in_future(),
-                                    text=get_greeting())
-
-    if qotd_hook and len(qotd_hook) > 0:
-        webhook = WebhookClient(qotd_hook)
-
+        greeting_text = get_greeting()
+        if not args.now:
+            scheduled_time_in_future = get_time_in_future()
+        if args.verbose:
+            print(f'Greeting: {scheduled_greeting} at {scheduled_time_in_future}')
         if not args.dryrun:
-            webhook.send(blocks=get_qotd_blocks(pokemon))
+            client.users_setPhoto(image=png)
+            client.users_profile_set(profile={'status_text': pokemon.display_name()})
+            client.chat_postMessage(channel='#pokecards', text=pokemon.display_name(), blocks=get_card_blocks(pokemon))
+            if not args.now:
+                client.chat_scheduleMessage(channel='#dev-ios',
+                                            post_at=scheduled_time_in_future,
+                                            text=greeting_text)
+            else:
+                client.chat_postMessage(channel='#dev-ios',
+                                        text=greeting_text)
+
+
+            if qotd_hook and len(qotd_hook) > 0:
+                webhook = WebhookClient(qotd_hook)
+                webhook.send(blocks=get_qotd_blocks(pokemon))
+
