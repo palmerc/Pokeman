@@ -181,8 +181,9 @@ if __name__ == "__main__":
                                             post_at=scheduled_time_in_future,
                                             text=greeting_text)
             else:
-                client.chat_postMessage(channel='#dev-ios',
+                response = client.chat_postMessage(channel='#dev-ios',
                                         text=greeting_text)
+                client.reactions_add(channel='C8PBQ4H6E', name='sunrise', timestamp=response.data['ts'])
 
 
             if qotd_hook and len(qotd_hook) > 0:
