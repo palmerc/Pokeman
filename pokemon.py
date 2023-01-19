@@ -26,18 +26,29 @@ class Pokemon(object):
             return '{} - {}'.format(self.name, self._padded_number())
 
     def img_url(self):
-        return self.current_form()['img']
+        form = self.current_form()
+        img_url = ''
+        if form:
+            img_url = form['img']
+        return img_url
 
     def random_card(self):
         return PokemenTCG(self).random_card()
 
     def png(self):
-        name = 'pokemon' + os.path.basename(self.img_url())
-        png = requests.get(self.img_url()).content
+        name = 'Pokémon'
+        png = None
+        if self.img_url():
+            name = 'pokemon' + os.path.basename(self.img_url())
+            png = requests.get(self.img_url()).content
         return name, png
 
     def current_form(self):
-        return self.available_forms()[self._form]
+        forms = self.available_forms()
+        form = None
+        if forms:
+            form = forms[self._form]
+        return form
 
     def available_forms(self):
         if len(self._forms) == 0:
@@ -56,6 +67,14 @@ class Pokemon(object):
 
     def _pokemon_detail(self):
         pokedex = 'https://www.pokemon.com/us/pokedex/'
+        detail_url = pokedex + self.number
+        response = Pokemon._request_get(detail_url)
+        return BeautifulSoup(response.text, 'html.parser')
 
-        request = requests.get(pokedex + self.number)
-        return BeautifulSoup(request.text, 'html.parser')
+    @staticmethod
+    def _request_get(url):
+        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15'}
+        response = requests.head(url, headers=headers, allow_redirects=True)
+        detail_url = response.url
+        return requests.get(detail_url, headers=headers, cookies=response.cookies)
+

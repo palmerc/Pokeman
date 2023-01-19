@@ -46,7 +46,11 @@ class PokemenTCG(object):
         return cards
 
     def random_card(self):
-        return random.sample(self.all_cards(), 1).pop()
+        all_cards = self.all_cards()
+        a_card = None
+        if len(all_cards) > 0:
+            a_card = random.sample(all_cards, 1).pop()
+        return a_card
 
     def _pokemon_detail(self):
         pokedex = base_url + '/us/pokedex/'

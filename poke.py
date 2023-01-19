@@ -65,6 +65,8 @@ def get_qotd_blocks(pokemon):
 
 def get_card_blocks(pokemon):
     card = pokemon.random_card()
+    if not card:
+        return None
     name = card.display_name()
     title_link = '<{}|{}>'.format(card.url(), name)
     image_url = card.image()
@@ -171,11 +173,13 @@ if __name__ == "__main__":
         if not args.now:
             scheduled_time_in_future = get_time_in_future()
         if args.verbose:
-            print(f'Greeting: {scheduled_greeting} at {scheduled_time_in_future}')
+            print(f'Greeting: {greeting_text} at {scheduled_time_in_future}')
         if not args.dryrun:
             client.users_setPhoto(image=png)
             client.users_profile_set(profile={'status_text': pokemon.display_name()})
-            client.chat_postMessage(channel='#pokecards', text=pokemon.display_name(), blocks=get_card_blocks(pokemon))
+            card_blocks = get_card_blocks(pokemon)
+            if card_blocks:
+                client.chat_postMessage(channel='#pokecards', text=pokemon.display_name(), blocks=card_blocks)
             if not args.now:
                 client.chat_scheduleMessage(channel='#dev-ios',
                                             post_at=scheduled_time_in_future,
@@ -183,6 +187,7 @@ if __name__ == "__main__":
             else:
                 response = client.chat_postMessage(channel='#dev-ios',
                                         text=greeting_text)
+                time.sleep(1)
                 client.reactions_add(channel='C8PBQ4H6E', name='sunrise', timestamp=response.data['ts'])
 
 

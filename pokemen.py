@@ -29,16 +29,18 @@ class Pokemen:
         soup = BeautifulSoup(request.text, 'html.parser')
 
         pokedex_re = re.compile('^National Pokédex$')
-        pokemon_re = re.compile('(\d+) - (\w+)')
+        pokemon_re = re.compile('(\d+) - (.+)$')
 
         pokemen = []
         for header in soup.findAll('h2', text=pokedex_re):
             ul_tag = header.findNext('ul')
             for a_tag in ul_tag.find_all('a'):
-                match = re.match(pokemon_re, a_tag.text)
-                number = match.group(1)
-                name = match.group(2)
-                pokemen.append(Pokemon(name, number))
+                poketext = a_tag.text.strip()
+                match = re.match(pokemon_re, poketext)
+                if match:
+                    number = match.group(1)
+                    name = match.group(2)
+                    pokemen.append(Pokemon(name, number))
 
         pokemen.sort(key=lambda p: p.number)
         return pokemen
