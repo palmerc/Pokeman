@@ -20,7 +20,8 @@ from pokemon_tcg import PokemenTCG
 
 
 def get_qotd(markdown=False):
-    r = requests.get('https://quotes.rest/qod?category=management&language=en')
+    headers = {'accept': 'application/json', 'Authorization': 'Bearer yVBGlWw6bGBg3V2na06sXb71Xf3u9wdjpj8MD8mN'}
+    r = requests.get('https://quotes.rest/qod?category=management&language=en', headers=headers)
     json_data = None
     try:
         json_data = json.loads(r.text)
