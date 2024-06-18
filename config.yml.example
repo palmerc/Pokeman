@@ -1,3 +1,39 @@
 token: ''
 qotd_hook: ''
 
+greetings:
+  - Good Morning
+  - good morning
+  - Good morning!
+
+special_greetings:
+  - Top of the morning to you.
+  - Morning
+  - God morgen
+  - Bonjour
+  - Buenas días
+  - Доброго ранку
+  - Доброе утро
+  - Guten Morgen
+  - おはよう
+  - 早上好
+
+important_dates:
+  - desc: Juneteeth
+    date: 1865-06-19
+    message:
+  - desc: New Year's Day
+    date: 0001-01-01
+    message: Happy New Year!
+  - desc: Constitution day
+    date: 1814-05-17
+    message: Gratulerer med dagen!
+  - desc: Christmas day
+    date: 0001-12-25
+    message: Merry Christmas!
+  - desc: Pi day
+    date: 0001-03-14
+    message: 'It is Pi day! The first 10 digits of pi (π) are 3.1415926535'
+  - desc: Star Wars day
+    date: 0001-05-04
+    message: May the 4th be with you.

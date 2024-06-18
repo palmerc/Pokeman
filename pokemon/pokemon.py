@@ -1,8 +1,9 @@
 import os
-import requests
+
 from bs4 import BeautifulSoup
 
-from pokemon_tcg import PokemenTCG
+from pokemon.browser import Browser
+from pokemon.pokemon_tcg import PokemenTCG
 
 
 class Pokemon(object):
@@ -40,7 +41,7 @@ class Pokemon(object):
         png = None
         if self.img_url():
             name = 'pokemon' + os.path.basename(self.img_url())
-            png = requests.get(self.img_url()).content
+            png = Browser().get_file(self.img_url())
         return name, png
 
     def current_form(self):
@@ -68,13 +69,5 @@ class Pokemon(object):
     def _pokemon_detail(self):
         pokedex = 'https://www.pokemon.com/us/pokedex/'
         detail_url = pokedex + self.number
-        response = Pokemon._request_get(detail_url)
-        return BeautifulSoup(response.text, 'html.parser')
-
-    @staticmethod
-    def _request_get(url):
-        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15'}
-        response = requests.head(url, headers=headers, allow_redirects=True)
-        detail_url = response.url
-        return requests.get(detail_url, headers=headers, cookies=response.cookies)
-
+        page_source = Browser().get(detail_url)
+        return BeautifulSoup(page_source, 'html.parser')

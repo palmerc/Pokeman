@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 
-from requests_toolbelt.multipart.encoder import MultipartEncoder
 from datetime import date, datetime
 import time
 import argparse
 import pathlib
 import requests
 import random
-import urllib.parse
 import json
 import yaml
 import os
@@ -15,8 +13,10 @@ import os
 from slack_sdk import WebClient
 from slack_sdk.webhook import WebhookClient
 
-from pokemen import Pokemen
-from pokemon_tcg import PokemenTCG
+from pokemon.pokemen import Pokemen
+
+source_dir = pathlib.Path(__file__).parent
+config_yml = source_dir / 'config.yml'
 
 
 def get_qotd(markdown=False):
@@ -100,45 +100,24 @@ def get_time_in_future():
     return random.randrange(now_time, max_time)
 
 
-def get_greeting():
-    greetings = [
-        'Top of the morning to you.',
-        'Morning',
-        'God morgen',
-        'Bonjour',
-        'Buenas días',
-        'Доброго ранку',
-        'Guten Morgen',
-        'おはよう'
-    ]
-
-    # 'Доброе утро',
+def get_greeting(config):
     today = date.today()
-    new_year = date.fromisoformat('0001-01-01')
-    birthday = date.fromisoformat('1974-05-06')
-    jv_bday = date.fromisoformat('1979-08-30')
-    constitution_day = date.fromisoformat('1814-05-17')
-    christmas_day = date.fromisoformat('0001-12-25')
-    if today == new_year.replace(year=today.year):
-        return 'Happy New Year!'
-    elif today == birthday.replace(year=today.year):
-        return 'Happy Birthday <@Cameron Palmer>'
-    elif today == jv_bday.replace(year=today.year):
-        return f'Gratulerer med dagen <@janvidar>! Du er {int((today - jv_bday).total_seconds())} sekunder ung!'
-    elif today == christmas_day.replace(year=today.year):
-        return 'Merry Christmas!'
-    elif today == constitution_day.replace(year=today.year):
-        return 'Gratulerer med dagen!'
-    else:
-        for i in range(0, 20):
-            greetings.extend(['Good Morning', 'good morning', 'Good morning!'])
-        return random.choice(greetings)
+    important_dates = config.get('important_dates')
+    for important_date in important_dates:
+        candi_date = important_date.get('date')
+        if today == candi_date.replace(year=today.year):
+            return important_date.get('message')
+
+    greetings = config.get('greetings')
+    special_greetings = config.get('special_greetings')
+    all_greetings = []
+    all_greetings.extend(special_greetings)
+    for i in range(0, 20):
+        all_greetings.extend(greetings)
+    return random.choice(greetings)
 
 
-if __name__ == "__main__":
-    source_dir = pathlib.Path(__file__).parent
-    config_yml = source_dir / 'config.yml'
-
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Set Slack Profile to a Pokémon') 
     parser.add_argument('--config', dest='config',
                         help='set the path of the config to use', default=str(config_yml))
@@ -153,7 +132,7 @@ if __name__ == "__main__":
 
     config_path = pathlib.Path(args.config)
     with open(config_path) as f:
-        config = yaml.load(f.read(), Loader=yaml.FullLoader)
+        config = yaml.load(f.read(), Loader=yaml.SafeLoader)
 
     token = config.get('token')
     qotd_hook = config.get('qotd_hook')
@@ -164,24 +143,34 @@ if __name__ == "__main__":
         print("Hello: {}". format(hello_hook))
 
     pokemon = Pokemen.select_pokemon(number=args.pokemon)
-    print(f'{date.today()}: {pokemon.display_name()}')
+    png = None
+    if pokemon:
+        print(f'{date.today()}: {pokemon.display_name()}')
+        _, png = pokemon.png()
 
     if token and len(token) > 0:
         client = WebClient(token=token)
 
-        name, png = pokemon.png()
-        greeting_text = get_greeting()
+        greeting_text = get_greeting(config)
+        scheduled_time_in_future = None
         if not args.now:
             scheduled_time_in_future = get_time_in_future()
-        if args.verbose:
-            print(f'Greeting: {greeting_text} at {scheduled_time_in_future}')
+            if args.verbose:
+                print(f'Greeting: {greeting_text} at {scheduled_time_in_future}')
+
         if not args.dryrun:
-            client.users_setPhoto(image=png)
-            client.users_profile_set(profile={'status_text': pokemon.display_name()})
-            card_blocks = get_card_blocks(pokemon)
-            if card_blocks:
-                client.chat_postMessage(channel='#pokecards', text=pokemon.display_name(), blocks=card_blocks)
-            if not args.now:
+            if png:
+                client.users_setPhoto(image=png)
+            if pokemon:
+                client.users_profile_set(profile={'status_text': pokemon.display_name()})
+                card_blocks = get_card_blocks(pokemon)
+                if card_blocks:
+                    client.chat_postMessage(channel='#pokecards', text=pokemon.display_name(), blocks=card_blocks)
+
+                if qotd_hook and len(qotd_hook) > 0:
+                    webhook = WebhookClient(qotd_hook)
+                    webhook.send(blocks=get_qotd_blocks(pokemon))
+            if scheduled_time_in_future:
                 client.chat_scheduleMessage(channel='#dev-ios',
                                             post_at=scheduled_time_in_future,
                                             text=greeting_text)
@@ -190,9 +179,3 @@ if __name__ == "__main__":
                                         text=greeting_text)
                 time.sleep(1)
                 client.reactions_add(channel='C8PBQ4H6E', name='sunrise', timestamp=response.data['ts'])
-
-
-            if qotd_hook and len(qotd_hook) > 0:
-                webhook = WebhookClient(qotd_hook)
-                webhook.send(blocks=get_qotd_blocks(pokemon))
-

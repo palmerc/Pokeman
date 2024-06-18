@@ -1,9 +1,10 @@
-from pokemon import Pokemon
-
-import re
 import random
-import requests
+import re
+
 from bs4 import BeautifulSoup
+
+from pokemon.browser import Browser
+from pokemon.pokemon import Pokemon
 
 
 class Pokemen:
@@ -17,17 +18,17 @@ class Pokemen:
         else:
             pokemen = random.sample(Pokemen.gather_pokemen(), 1)
 
-        pokemon = pokemen.pop()
-
-        return pokemon
+        if pokemen:
+            pokemon = pokemen.pop()
+            return pokemon
+        return None
 
     @classmethod
     def gather_pokemen(cls):
         pokedex = 'https://www.pokemon.com/us/pokedex/'
 
-        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15'}
-        request = requests.get(pokedex, headers=headers, allow_redirects=True)
-        soup = BeautifulSoup(request.text, 'html.parser')
+        page_source = Browser().get(pokedex)
+        soup = BeautifulSoup(page_source, 'html.parser')
 
         pokedex_re = re.compile('^National Pokédex$')
         pokemon_re = re.compile('(\d+) - (.+)$')

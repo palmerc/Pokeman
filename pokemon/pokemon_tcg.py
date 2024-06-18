@@ -1,6 +1,8 @@
 import random
-import requests
+
 from bs4 import BeautifulSoup
+
+from pokemon.browser import Browser
 
 
 base_url = 'https://www.pokemon.com'
@@ -55,5 +57,5 @@ class PokemenTCG(object):
     def _pokemon_detail(self):
         pokedex = base_url + '/us/pokedex/'
 
-        request = requests.get(pokedex + self.pokemon.number)
-        return BeautifulSoup(request.text, 'html.parser')
+        page_source = Browser().get(pokedex + self.pokemon.number)
+        return BeautifulSoup(page_source, 'html.parser')
