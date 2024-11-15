@@ -1,7 +1,7 @@
 import requests
 from seleniumwire import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import ChromeOptions
 from selenium_stealth import stealth
 
 class Browser(object):
@@ -11,11 +11,11 @@ class Browser(object):
         return cls.shared_instance
 
     def __init__(self):
-        options = Options()
+        options = ChromeOptions()
         options.add_argument('--headless=new')
 
         service = Service()
-        self._driver = webdriver.Chrome(chrome_options=options, service=service)
+        self._driver = webdriver.Chrome(options=options, service=service)
         stealth(self._driver,
                 languages=["en-US", "en"],
                 vendor="Google Inc.",
